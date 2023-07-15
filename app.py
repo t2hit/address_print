@@ -1,7 +1,10 @@
 from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 from pypdf import PdfReader, PdfWriter
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 
+pdfmetrics.registerFont(UnicodeCIDFont("HeiseiMin-W3", isVertical=True))
 
 POST_CARD = {
     "size": (100 * mm, 148 * mm),  # (x,y) >> ハガキのサイズ
@@ -16,14 +19,13 @@ POST_CARD = {
         (-13.7 * mm, -20 * mm, 5.7 * mm, 8 * mm),
     ),
     "name_rect": (-64.25 * mm, -128 * mm, 28.5 * mm, 98 * mm),  # 氏名の枠 上:30mm 下:20mm 幅:文字サイズで後ほど調整
-    "address_rect": (-20 * mm, -128 * mm, 28.5 * mm, 98 * mm),  # 住所の枠 上:30mm 下:20mm
-    "font_ratio": 1.4,  # 文字サイズの係数
+    "address_rect": (-25 * mm, -128 * mm, 28.5 * mm, 103 * mm),  # 住所の枠 上:30mm 下:20mm
+    "font_ratio": 1.4,
 }
 
 
 def main():
     data = "3642452,小川 香織,栃木県国立市戸山9丁目8番11号"
-    # 情報を使いやすいように変数に分割代入
     postal_code, name, address = data.split(",")
 
     # サイズを指定してインスタンスを生成
@@ -34,15 +36,41 @@ def main():
 
     # 郵便番号を追加
     for number, rect in zip(postal_code, POST_CARD["code_rect"]):
-        # 文字サイズを指定(枠の高さ)
         c.setFont("Helvetica", (rect[3] - padding * 2) * POST_CARD["font_ratio"])
 
-        # 郵便番号枠の位置座標をPDF座標に変換
+        # x = -55.7 + 100
+        # y = -20 + 148
         x_pdf = rect[0] + POST_CARD["size"][0] + rect[2] / 2
         y_pdf = rect[1] + POST_CARD["size"][1] + padding
 
-        # 郵便番号の入力 中央寄せなので、枠の半分で調整
+        # 番号を記述
         c.drawCentredString(x_pdf, y_pdf, number)
+
+    # 氏名を追加
+    name = f"{name} 様"
+
+    # フォント指定 枠内に納まるように文字数で決める
+    font_size = POST_CARD["name_rect"][3] / len(name)
+    c.setFont("HeiseiMin-W3", font_size)
+
+    # 氏名の位置座標をPDF座標に変換
+    x_pdf = POST_CARD["name_rect"][0] + POST_CARD["size"][0] + POST_CARD["name_rect"][2] / 2
+    y_pdf = POST_CARD["name_rect"][1] + POST_CARD["size"][1] + POST_CARD["name_rect"][3]
+
+    # テキスト挿入
+    c.drawString(x_pdf, y_pdf, f"{name}")
+
+    # 住所を追加
+    # フォント指定 枠内に納まるように文字数で決める
+    font_size = POST_CARD["address_rect"][3] / len(address)
+    c.setFont("HeiseiMin-W3", font_size)
+
+    # 氏名の位置座標をPDF座標に変換
+    x_pdf = POST_CARD["address_rect"][0] + POST_CARD["size"][0] + POST_CARD["address_rect"][2] / 2
+    y_pdf = POST_CARD["address_rect"][1] + POST_CARD["size"][1] + POST_CARD["address_rect"][3]
+
+    # テキスト挿入
+    c.drawString(x_pdf, y_pdf, f"{address}")
 
     c.showPage()
     c.save()
